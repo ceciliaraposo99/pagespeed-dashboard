@@ -2,6 +2,7 @@ const http = require('http');
 const https = require('https');
 
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.PAGESPEED_API_KEY || 'AIzaSyAKVkXSDdbVt7nF4CNysCr0xtxmMRYt90k';
 
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +18,7 @@ const server = http.createServer((req, res) => {
     const strategy = urlObj.searchParams.get('strategy') || 'mobile';
     if (!site) { res.writeHead(400); res.end(JSON.stringify({ error: 'Missing url param' })); return; }
 
-    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(site)}&strategy=${strategy}&category=performance`;
+    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(site)}&strategy=${strategy}&category=performance&key=${API_KEY}`;
 
     https.get(apiUrl, (apiRes) => {
       let data = '';
@@ -46,7 +47,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`✅ PageSpeed proxy rodando em http://localhost:${PORT}`);
-  console.log(`   Dashboard: http://localhost:${PORT}/`);
-  console.log(`   API:       http://localhost:${PORT}/pagespeed?url=https://example.com`);
+  console.log(`✅ PageSpeed proxy rodando na porta ${PORT}`);
 });
