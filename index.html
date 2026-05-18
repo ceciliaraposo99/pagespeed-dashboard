@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Core Web Vitals — Creditável & Neocred</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2230;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#4a4f61;
+  --good:#4ade80;--avg:#fbbf24;--poor:#f87171;
+  --accent:#6366f1;--accent2:#818cf8;
+  --r:12px;--rs:8px
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;min-height:100vh;padding:2rem 1.5rem 4rem}
+header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:0.5px solid var(--border2)}
+.header-left h1{font-size:21px;font-weight:600;letter-spacing:-.3px;background:linear-gradient(135deg,#e8eaf0 0%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.header-left p{font-size:13px;color:var(--text2)}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--bg3);border:0.5px solid var(--border);border-radius:20px;padding:5px 12px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--accent2);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.btn{display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:13px;font-weight:500;color:var(--text);background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--rs);cursor:pointer;transition:background .15s,border-color .15s;text-decoration:none}
+.btn:hover{background:#262b3d;border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:1rem;font-size:12px;color:var(--text2)}
+.leg{display:flex;align-items:center;gap:6px}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+.progress-wrap{width:100%;height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:1.5rem}
+.progress-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease;width:0%}
+.group-label{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin:2rem 0 .75rem;display:flex;align-items:center;gap:8px}
+.group-label::after{content:'';flex:1;height:0.5px;background:var(--border)}
+.group-label:first-of-type{margin-top:0}
+.sites-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.site-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s;position:relative}
+.site-card:hover{border-color:var(--border2)}
+.site-card.loading{opacity:.55}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px}
+.site-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:185px;display:flex;align-items:center;gap:6px}
+.ext-link{color:var(--text3);font-size:11px;text-decoration:none;flex-shrink:0;transition:color .15s}
+.ext-link:hover{color:var(--accent2)}
+.score-ring{flex-shrink:0;width:44px;height:44px;position:relative;display:flex;align-items:center;justify-content:center}
+.score-ring svg{position:absolute;top:0;left:0;transform:rotate(-90deg)}
+.score-num{font-size:13px;font-weight:600;position:relative;z-index:1}
+.metrics-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.metric{background:var(--bg3);border-radius:var(--rs);padding:10px 10px 8px}
+.metric-label-row{display:flex;align-items:center;gap:4px;margin-bottom:5px}
+.metric-label{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)}
+.info-wrap{position:relative;display:inline-flex}
+.info-btn{width:14px;height:14px;border-radius:50%;border:1px solid var(--text3);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-style:normal;color:var(--text3);cursor:help;flex-shrink:0;transition:border-color .15s,color .15s;line-height:1;user-select:none}
+.info-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.info-wrap .tooltip{visibility:hidden;opacity:0;pointer-events:none;position:absolute;z-index:9999;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:218px;background:#1a1e2e;border:0.5px solid var(--border2);border-radius:var(--rs);padding:12px 14px;transition:opacity .15s;box-shadow:0 8px 32px rgba(0,0,0,.55)}
+.info-wrap .tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#2a2f42}
+.info-wrap:hover .tooltip{visibility:visible;opacity:1}
+.tt-title{font-size:11px;font-weight:600;color:var(--text);margin-bottom:5px}
+.tt-desc{font-size:11px;line-height:1.55;color:var(--text2);margin-bottom:8px}
+.tt-row{display:flex;align-items:center;gap:6px;font-size:10px;margin-bottom:2px}
+.tt-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tt-lbl{color:var(--text2);flex:1}
+.tt-val{color:var(--text);font-weight:500}
+.metric-value{font-size:18px;font-weight:600;line-height:1;color:var(--text)}
+.metric-unit{font-size:11px;font-weight:400;color:var(--text2);margin-left:1px}
+.good-v{color:var(--good)!important}
+.avg-v{color:var(--avg)!important}
+.poor-v{color:var(--poor)!important}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--accent2);border-radius:50%;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err-msg{font-size:10px;color:var(--poor);margin-top:6px;line-height:1.4}
+.notice{background:var(--bg3);border:0.5px solid rgba(251,191,36,0.3);border-radius:var(--rs);padding:12px 16px;margin-bottom:1.5rem;font-size:12px;color:var(--avg);line-height:1.6}
+.notice strong{color:var(--text)}
+footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);font-size:11px;color:var(--text3);display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Core Web Vitals</h1>
+    <p>Creditável &amp; Neocred — Mobile · PageSpeed Insights</p>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <span class="pulse" id="pulse-dot"></span>
+      <span id="status-text">Aguardando proxy...</span>
+    </div>
+    <button class="btn" onclick="startAll()" id="refresh-btn">↻ Atualizar</button>
+  </div>
+</header>
+
+<div class="notice" id="notice">
+  <strong>⚙ Configuração necessária:</strong> Este dashboard precisa do servidor proxy rodando localmente.<br>
+  Execute no terminal: <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:11px">node server.js</code>
+  e recarregue a página. O proxy resolve o bloqueio de CORS da API do Google.
+</div>
+
+<div class="legend">
+  <span class="leg"><span class="leg-dot" style="background:var(--good)"></span>Bom</span>
+  <span class="leg"><span class="leg-dot" style="background:var(--avg)"></span>Precisa melhorar</span>
+  <span class="leg"><span class="leg-dot" style="background:var(--poor)"></span>Ruim</span>
+  <span class="leg"><span class="leg-dot" style="background:var(--text3)"></span>Sem dados</span>
+</div>
+
+<div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+
+<div class="group-label">Creditável</div>
+<div class="sites-grid" id="grid-creditavel"></div>
+
+<div class="group-label">Neocred</div>
+<div class="sites-grid" id="grid-neocred"></div>
+
+<footer>
+  <span>Dados via Google PageSpeed Insights API · Estratégia Mobile · Janela 28 dias</span>
+  <span id="last-update"></span>
+</footer>
+
+<script>
+// ⚙ Altere para a URL do seu proxy se estiver hospedado na nuvem
+// Ex: const PROXY = 'https://meu-proxy.railway.app';
+const PROXY = 'http://localhost:3000';
+
+const CREDITAVEL=['happenplace.com','minimalguy.com','cashurio.com','finxtrio.com','credlin.org','finanpret.com','limitroute.com','zupscore.com','br.mifinanzzas.com','creditavel.com'];
+const NEOCRED=['economigo.org','economyeagle.com','credon.com.br','dinstoday.com'];
+
+const MINFO={
+  LCP:{full:'Largest Contentful Paint',desc:'Tempo até o maior elemento visível carregar. Impacta diretamente a percepção de velocidade no quiz funnel e a taxa de permanência no site.',rows:[{c:'var(--good)',l:'Bom',v:'≤ 2,5s'},{c:'var(--avg)',l:'Melhorar',v:'2,5s – 4s'},{c:'var(--poor)',l:'Ruim',v:'> 4s'}]},
+  INP:{full:'Interaction to Next Paint',desc:'Tempo de resposta a cliques e toques. Afeta o engajamento nas etapas do quiz e a experiência geral de navegação.',rows:[{c:'var(--good)',l:'Bom',v:'≤ 200ms'},{c:'var(--avg)',l:'Melhorar',v:'200 – 500ms'},{c:'var(--poor)',l:'Ruim',v:'> 500ms'}]},
+  CLS:{full:'Cumulative Layout Shift',desc:'Instabilidade visual — quanto os elementos pulam enquanto carregam. Afeta cliques acidentais em anúncios GAM e a conclusão do quiz.',rows:[{c:'var(--good)',l:'Bom',v:'≤ 0,10'},{c:'var(--avg)',l:'Melhorar',v:'0,10 – 0,25'},{c:'var(--poor)',l:'Ruim',v:'> 0,25'}]}
+};
+
+function tooltipHTML(key){
+  const m=MINFO[key];
+  const rows=m.rows.map(r=>`<div class="tt-row"><span class="tt-dot" style="background:${r.c}"></span><span class="tt-lbl">${r.l}</span><span class="tt-val">${r.v}</span></div>`).join('');
+  return `<span class="info-wrap"><span class="info-btn">i</span><div class="tooltip"><div class="tt-title">${m.full}</div><div class="tt-desc">${m.desc}</div>${rows}</div></span>`;
+}
+
+function createCard(d){
+  const id='c_'+d.replace(/[\.\-]/g,'_');
+  return `<div class="site-card loading" id="${id}">
+    <div class="card-header">
+      <span class="site-name">${d}<a class="ext-link" href="https://${d}" target="_blank" rel="noopener">↗</a></span>
+      <div class="score-ring">
+        <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/><circle id="${id}_arc" cx="22" cy="22" r="18" fill="none" stroke="#4a4f61" stroke-width="3" stroke-dasharray="113" stroke-dashoffset="113" stroke-linecap="round" style="transition:stroke-dashoffset .6s ease,stroke .4s ease"/></svg>
+        <span class="score-num" id="${id}_score" style="color:#4a4f61"><span class="spinner"></span></span>
+      </div>
+    </div>
+    <div class="metrics-row">
+      <div class="metric"><div class="metric-label-row"><span class="metric-label">LCP</span>${tooltipHTML('LCP')}</div><div class="metric-value" id="${id}_lcp">–</div></div>
+      <div class="metric"><div class="metric-label-row"><span class="metric-label">INP</span>${tooltipHTML('INP')}</div><div class="metric-value" id="${id}_inp">–</div></div>
+      <div class="metric"><div class="metric-label-row"><span class="metric-label">CLS</span>${tooltipHTML('CLS')}</div><div class="metric-value" id="${id}_cls">–</div></div>
+    </div>
+    <div id="${id}_err"></div>
+  </div>`;
+}
+
+function renderGrid(domains,cid){document.getElementById(cid).innerHTML=domains.map(createCard).join('')}
+const SC=s=>s===null?'#4a4f61':s>=90?'#4ade80':s>=50?'#fbbf24':'#f87171';
+const VC=(v,g,a)=>v===null?'':v<=g?'good-v':v<=a?'avg-v':'poor-v';
+
+function setScore(id,s){
+  const arc=document.getElementById(id+'_arc'),num=document.getElementById(id+'_score');
+  arc.style.strokeDashoffset=s===null?113:113-(s/100)*113;
+  arc.style.stroke=SC(s); num.textContent=s===null?'–':s; num.style.color=SC(s);
+}
+
+async function fetchSite(domain){
+  const id='c_'+domain.replace(/[\.\-]/g,'_');
+  try{
+    const res=await fetch(`${PROXY}/pagespeed?url=https://${domain}&strategy=mobile`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d=await res.json();
+    if(d.error) throw new Error(d.error.message?.slice(0,60)||'Sem dados');
+    const cats=d.lighthouseResult?.categories;
+    const audits=d.lighthouseResult?.audits;
+    const score=cats?.performance?.score!=null?Math.round(cats.performance.score*100):null;
+    const lcp=audits?.['largest-contentful-paint']?.numericValue!=null?audits['largest-contentful-paint'].numericValue/1000:null;
+    const inp=(audits?.['interaction-to-next-paint']||audits?.['total-blocking-time'])?.numericValue??null;
+    const cls=audits?.['cumulative-layout-shift']?.numericValue??null;
+    setScore(id,score);
+    document.getElementById(id+'_lcp').innerHTML=lcp!=null?`<span class="${VC(lcp,2.5,4.0)}">${lcp.toFixed(1)}</span><span class="metric-unit"> s</span>`:'–';
+    document.getElementById(id+'_inp').innerHTML=inp!=null?`<span class="${VC(inp,200,500)}">${Math.round(inp)}</span><span class="metric-unit"> ms</span>`:'–';
+    document.getElementById(id+'_cls').innerHTML=cls!=null?`<span class="${VC(cls,0.1,0.25)}">${cls.toFixed(3)}</span>`:'–';
+    document.getElementById(id).classList.remove('loading');
+  }catch(e){
+    setScore(id,null);
+    document.getElementById(id+'_err').innerHTML=`<div class="err-msg">⚠ ${(e.message||'Erro').slice(0,70)}</div>`;
+    document.getElementById(id).classList.remove('loading');
+  }
+}
+
+let running=false;
+async function startAll(){
+  if(running)return;
+  running=true;
+  document.getElementById('refresh-btn').disabled=true;
+  document.getElementById('notice').style.display='none';
+  document.getElementById('pulse-dot').style.background='var(--avg)';
+  renderGrid(CREDITAVEL,'grid-creditavel');
+  renderGrid(NEOCRED,'grid-neocred');
+  const all=[...CREDITAVEL,...NEOCRED];
+  let done=0;
+  const bar=document.getElementById('progress-bar');
+  bar.style.width='0%';
+  document.getElementById('status-text').textContent=`Consultando… 0/${all.length}`;
+  const upd=()=>{
+    done++;
+    bar.style.width=Math.round((done/all.length)*100)+'%';
+    document.getElementById('status-text').textContent=done<all.length?`Consultando… ${done}/${all.length}`:`✓ ${all.length} sites atualizados`;
+    if(done===all.length){
+      document.getElementById('pulse-dot').style.background='var(--good)';
+      document.getElementById('last-update').textContent='Atualizado: '+new Date().toLocaleTimeString('pt-BR');
+    }
+  };
+  await Promise.all(all.map(d=>fetchSite(d).then(upd).catch(upd)));
+  running=false;
+  document.getElementById('refresh-btn').disabled=false;
+}
+
+// Verifica se o proxy está rodando ao carregar
+fetch(`${PROXY}/pagespeed?url=https://example.com&strategy=mobile`)
+  .then(()=>{document.getElementById('notice').style.display='none';startAll();})
+  .catch(()=>{ document.getElementById('status-text').textContent='Proxy offline'; });
+</script>
+</body>
+</html>
