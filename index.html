@@ -184,9 +184,25 @@ async function fetchSite(domain){
     document.getElementById(id).classList.remove('loading');
   }catch(e){
     setScore(id,null);
-    document.getElementById(id+'_err').innerHTML=`<div class="err-msg">⚠ ${(e.message||'Erro').slice(0,70)}</div>`;
+    const errEl=document.getElementById(id+'_err');
+    errEl.innerHTML=`<div class="err-msg" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">⚠ ${(e.message||'Erro').slice(0,55)} <button onclick="retrySite('${domain}')" style="font-size:10px;padding:2px 8px;cursor:pointer;background:rgba(99,102,241,0.15);border:0.5px solid rgba(99,102,241,0.4);color:#818cf8;border-radius:4px;white-space:nowrap;">↻ tentar novamente</button></div>`;
     document.getElementById(id).classList.remove('loading');
   }
+}
+
+async function retrySite(domain){
+  const id='c_'+domain.replace(/[\.-]/g,'_');
+  const card=document.getElementById(id);
+  card.classList.add('loading');
+  document.getElementById(id+'_err').innerHTML='';
+  document.getElementById(id+'_lcp').innerHTML='–';
+  document.getElementById(id+'_inp').innerHTML='–';
+  document.getElementById(id+'_cls').innerHTML='–';
+  document.getElementById(id+'_score').innerHTML='<span class="spinner"></span>';
+  document.getElementById(id+'_score').style.color='#4a4f61';
+  document.getElementById(id+'_arc').style.strokeDashoffset='113';
+  document.getElementById(id+'_arc').style.stroke='#4a4f61';
+  await fetchSite(domain);
 }
 
 let running=false;
