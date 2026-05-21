@@ -48,7 +48,7 @@ async function fetchActiveUrls() {
     const sheetEncoded = encodeURIComponent(sheet.sheet);
 
     for (const range of sheet.ranges) {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values/${encodeURIComponent("'" + sheet.sheet + "'!" + range)}?key=${API_KEY}`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheet.spreadsheetId}/values/'${encodeURIComponent(sheet.sheet)}'!${range}?key=${API_KEY}`;
       try {
         const data = await httpsGet(url);
         const rows = data.values || [];
@@ -116,7 +116,7 @@ const server = http.createServer((req, res) => {
     const sheetId = urlObj.searchParams.get('id') || '17CrjCrPVw2CZ1iC10_S-eOZnnjcblyA8O6PPXD6NQoI';
     const range = urlObj.searchParams.get('range') || 'D15:E15';
     const sheetName = urlObj.searchParams.get('sheet') || 'URL_BALANCER atualizado';
-    const encoded = encodeURIComponent("'" + sheetName + "'" + '!' + range);
+    const encoded = "'" + encodeURIComponent(sheetName) + "'!" + range;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encoded}?key=${API_KEY}`;
     httpsGet(url)
       .then(data => {
