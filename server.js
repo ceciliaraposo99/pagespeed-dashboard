@@ -75,19 +75,24 @@ function fetchPS(site, strategy, attempt) {
 
 // ── Extract metrics from PageSpeed response ───────────
 function extractMetrics(d) {
-  const field  = d.loadingExperience?.metrics;
-  const origin = d.originLoadingExperience?.metrics;
-  const pick   = k => { const m = field?.[k] || origin?.[k]; return m?.percentile ?? null; };
+  const audits = d.lighthouseResult?.audits;
   const cats   = d.lighthouseResult?.categories;
-  const score  = cats?.performance?.score != null ? Math.round(cats.performance.score * 100) : null;
-  const lcpMs  = pick('LARGEST_CONTENTFUL_PAINT_MS');
-  const inp    = pick('INTERACTION_TO_NEXT_PAINT');
-  const clsRaw = pick('CUMULATIVE_LAYOUT_SHIFT_SCORE');
+
+  // Score from Lighthouse
+  const score = cats?.performance?.score != null
+    ? Math.round(cats.performance.score * 100) : null;
+
+  // LCP, INP, CLS from Lighthouse audits (same source as the score)
+  const lcpVal = audits?.['largest-contentful-paint']?.numericValue;
+  const inpVal = audits?.['interaction-to-next-paint']?.numericValue
+              ?? audits?.['total-blocking-time']?.numericValue;
+  const clsVal = audits?.['cumulative-layout-shift']?.numericValue;
+
   return {
     score,
-    lcp:   lcpMs  != null ? +(lcpMs  / 1000).toFixed(2) : null,
-    inp:   inp    != null ? Math.round(inp)              : null,
-    cls:   clsRaw != null ? +(clsRaw / 100).toFixed(3)  : null,
+    lcp:   lcpVal != null ? +( lcpVal / 1000).toFixed(2) : null,
+    inp:   inpVal != null ? Math.round(inpVal)            : null,
+    cls:   clsVal != null ? +clsVal.toFixed(3)            : null,
     error: d.error?.message || d.lighthouseResult?.runtimeError?.message || null
   };
 }
