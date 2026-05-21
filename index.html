@@ -339,8 +339,8 @@ function renderUrlsView() {
             return `<div class="url-card loading" id="${id}">
               <div class="url-card-top">
                 <div class="url-path" title="${url}">
-                  <span class="url-host">${host}</span>
-                  <span class="url-slug">${slug}</span>
+                  <span class="url-slug" style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug || '/'}</span>
+                  <span class="url-host" style="font-size:10px;color:var(--text3);display:block;margin-top:2px">${host}</span>
                 </div>
                 <div class="score-ring" style="width:36px;height:36px">
                   <svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/><circle id="${id}_arc" cx="18" cy="18" r="14" fill="none" stroke="#4a4f61" stroke-width="2.5" stroke-dasharray="88" stroke-dashoffset="88" stroke-linecap="round" style="transition:stroke-dashoffset .6s ease,stroke .4s ease"/></svg>
@@ -360,8 +360,17 @@ function renderUrlsView() {
     }).join('')}
   `).join('');
 
-  // Fetch PageSpeed for all URLs
-  ACTIVE_URLS_CACHE.forEach(group => group.squads.forEach(sq => sq.urls.forEach(url => fetchUrl(url))));
+  // Fetch PageSpeed in batches of 3 to avoid overwhelming the proxy
+  const allUrlsToFetch = [];
+  ACTIVE_URLS_CACHE.forEach(group => group.squads.forEach(sq => sq.urls.forEach(url => allUrlsToFetch.push(url))));
+  fetchInBatches(allUrlsToFetch, 3);
+}
+
+async function fetchInBatches(urls, batchSize) {
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize);
+    await Promise.all(batch.map(url => fetchUrl(url)));
+  }
 }
 
 async function fetchUrl(url) {
