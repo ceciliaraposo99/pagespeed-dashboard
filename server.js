@@ -110,6 +110,26 @@ const server = http.createServer((req, res) => {
 
   const urlObj = new URL(req.url, `http://localhost:${PORT}`);
 
+
+  // Rota: debug — ver resposta bruta da Sheets API
+  if (urlObj.pathname === '/debug-sheets') {
+    const sheetId = urlObj.searchParams.get('id') || '17CrjCrPVw2CZ1iC10_S-eOZnnjcblyA8O6PPXD6NQoI';
+    const range = urlObj.searchParams.get('range') || 'D15:E15';
+    const sheetName = urlObj.searchParams.get('sheet') || '📌 URL_BALANCER atualizado';
+    const encoded = encodeURIComponent(sheetName) + '!' + encodeURIComponent(range);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encoded}?key=${API_KEY}`;
+    httpsGet(url)
+      .then(data => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ url_called: url, response: data }, null, 2));
+      })
+      .catch(e => {
+        res.writeHead(500);
+        res.end(JSON.stringify({ error: e.message, url_called: url }));
+      });
+    return;
+  }
+
   // Rota: dados PageSpeed
   if (urlObj.pathname === '/pagespeed') {
     const site = urlObj.searchParams.get('url');
