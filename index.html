@@ -195,27 +195,11 @@ async function fetchSite(domain){
     if(d.error) throw new Error(d.error.message?.slice(0,60)||'Sem dados');
 
     // Dados de campo (CrUX) — experiência real dos últimos 28 dias
-    const field=d.loadingExperience?.metrics;
-    const originField=d.originLoadingExperience?.metrics;
-    const pick=(key)=>{
-      const m=field?.[key]||originField?.[key];
-      return m?.percentile??null;
-    };
-
-    // LCP em ms → converter para segundos
-    const lcpMs=pick('LARGEST_CONTENTFUL_PAINT_MS');
-    const lcp=lcpMs!==null?lcpMs/1000:null;
-
-    // INP em ms
-    const inp=pick('INTERACTION_TO_NEXT_PAINT');
-
-    // CLS é x100 na API (ex: 21 = 0.21)
-    const clsRaw=pick('CUMULATIVE_LAYOUT_SHIFT_SCORE');
-    const cls=clsRaw!==null?clsRaw/100:null;
-
-    // Score vem do Lighthouse (não tem campo equivalente no CrUX)
-    const cats=d.lighthouseResult?.categories;
-    const score=cats?.performance?.score!=null?Math.round(cats.performance.score*100):null;
+    // Server now returns pre-extracted metrics {score, lcp, inp, cls}
+    const score = d.score ?? null;
+    const lcp   = d.lcp   ?? null;
+    const inp   = d.inp   ?? null;
+    const cls   = d.cls   ?? null;
     setScore(id,score);
     document.getElementById(id+'_lcp').innerHTML=lcp!=null?`<span class="${VC(lcp,2.5,4.0)}">${lcp.toFixed(1)}</span><span class="metric-unit"> s</span>`:'–';
     document.getElementById(id+'_inp').innerHTML=inp!=null?`<span class="${VC(inp,200,500)}">${Math.round(inp)}</span><span class="metric-unit"> ms</span>`:'–';
@@ -407,15 +391,10 @@ async function fetchUrl(url) {
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const d = await res.json();
     if(d.error) throw new Error(d.error.message?.slice(0,60)||'Sem dados');
-    const field=d.loadingExperience?.metrics;
-    const originField=d.originLoadingExperience?.metrics;
-    const pick=(key)=>{const m=field?.[key]||originField?.[key];return m?.percentile??null;};
-    const cats=d.lighthouseResult?.categories;
-    const score=cats?.performance?.score!=null?Math.round(cats.performance.score*100):null;
-    const lcp=pick('LARGEST_CONTENTFUL_PAINT_MS')!==null?pick('LARGEST_CONTENTFUL_PAINT_MS')/1000:null;
-    const inp=pick('INTERACTION_TO_NEXT_PAINT');
-    const clsRaw=pick('CUMULATIVE_LAYOUT_SHIFT_SCORE');
-    const cls=clsRaw!==null?clsRaw/100:null;
+    const score = d.score ?? null;
+    const lcp   = d.lcp   ?? null;
+    const inp   = d.inp   ?? null;
+    const cls   = d.cls   ?? null;
 
     const arc=document.getElementById(id+'_arc');
     const num=document.getElementById(id+'_score');
