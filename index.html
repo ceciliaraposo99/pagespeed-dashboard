@@ -256,9 +256,25 @@ async function startAll(){
   document.getElementById('refresh-btn').disabled=false;
 }
 
-// Verifica se o proxy está rodando ao carregar
+// Ao carregar: inicia domínios e pré-aquece URLs Ativas em paralelo
 fetch(`${PROXY}/pagespeed?url=https://example.com&strategy=mobile`)
-  .then(()=>{document.getElementById('notice').style.display='none';startAll();})
+  .then(()=>{
+    document.getElementById('notice').style.display='none';
+    startAll();
+    // Pré-carrega URLs ativas em background sem mudar de aba
+    fetch(`${PROXY}/active-urls`)
+      .then(r => r.json())
+      .then(data => {
+        ACTIVE_URLS_CACHE = data.map(g => ({
+          ...g,
+          squads: g.squads.map(s => ({
+            ...s,
+            urls: s.urls.map(u => typeof u === 'string' ? {url: u, metrics: null} : u)
+          }))
+        }));
+      })
+      .catch(() => {});
+  })
   .catch(()=>{ document.getElementById('status-text').textContent='Proxy offline'; });
 </script>
 
@@ -373,8 +389,13 @@ function renderUrlsView() {
     }).join('')}
   `).join('');
 
-  // Auto-refresh se ainda tem dados pendentes
-  if (!allReady) setTimeout(() => { ACTIVE_URLS_CACHE=null; loadActiveUrls(); }, 30000);
+  // Auto-refresh a cada 20s enquanto houver dados pendentes
+  if (!allReady) {
+    clearTimeout(window._urlsRefreshTimer);
+    window._urlsRefreshTimer = setTimeout(() => { ACTIVE_URLS_CACHE=null; loadActiveUrls(); }, 20000);
+  } else {
+    clearTimeout(window._urlsRefreshTimer);
+  }
 }
 
 async function fetchInBatches(urls) {
