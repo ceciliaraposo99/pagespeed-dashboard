@@ -363,13 +363,12 @@ function renderUrlsView() {
   // Fetch PageSpeed in batches of 3 to avoid overwhelming the proxy
   const allUrlsToFetch = [];
   ACTIVE_URLS_CACHE.forEach(group => group.squads.forEach(sq => sq.urls.forEach(url => allUrlsToFetch.push(url))));
-  fetchInBatches(allUrlsToFetch, 3);
+  fetchInBatches(allUrlsToFetch);
 }
 
-async function fetchInBatches(urls, batchSize) {
-  for (let i = 0; i < urls.length; i += batchSize) {
-    const batch = urls.slice(i, i + batchSize);
-    await Promise.all(batch.map(url => fetchUrl(url)));
+async function fetchInBatches(urls) {
+  for (const url of urls) {
+    await fetchUrl(url);
   }
 }
 
