@@ -9,13 +9,13 @@ const SHEETS = [
   {
     company: 'Creditável',
     spreadsheetId: '17CrjCrPVw2CZ1iC10_S-eOZnnjcblyA8O6PPXD6NQoI',
-    sheet: '📌 URL_BALANCER atualizado',
+    sheet: 'URL_BALANCER atualizado',
     ranges: ['D15:E15', 'D29:E29', 'D43:E43', 'D56:E56']
   },
   {
     company: 'Neocred',
     spreadsheetId: '1tIl6N1kJv4JGhr_GhwFFEUUD4B0MljOMIMfsITboRbg',
-    sheet: '📌 URL_BALANCER atualizado',
+    sheet: 'URL_BALANCER atualizado',
     ranges: ['D15:E15', 'D29:E29']
   }
 ];
@@ -115,7 +115,7 @@ const server = http.createServer((req, res) => {
   if (urlObj.pathname === '/debug-sheets') {
     const sheetId = urlObj.searchParams.get('id') || '17CrjCrPVw2CZ1iC10_S-eOZnnjcblyA8O6PPXD6NQoI';
     const range = urlObj.searchParams.get('range') || 'D15:E15';
-    const sheetName = urlObj.searchParams.get('sheet') || '📌 URL_BALANCER atualizado';
+    const sheetName = urlObj.searchParams.get('sheet') || 'URL_BALANCER atualizado';
     const encoded = encodeURIComponent(sheetName) + '!' + encodeURIComponent(range);
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encoded}?key=${API_KEY}`;
     httpsGet(url)
