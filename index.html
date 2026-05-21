@@ -316,43 +316,65 @@ function getHostname(url) {
 function renderUrlsView() {
   if (!ACTIVE_URLS_CACHE) { loadActiveUrls(); return; }
   const container = document.getElementById('view-urls');
+  const SC = s => s===null?'#4a4f61':s>=90?'#4ade80':s>=50?'#fbbf24':'#f87171';
+  const VC = (v,g,a) => v===null?'':v<=g?'good-v':v<=a?'avg-v':'poor-v';
+
+  function scoreRing(s, id) {
+    const c = SC(s); const off = s===null?88:88-(s/100)*88;
+    return `<div class="score-ring" style="width:36px;height:36px">
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/>
+        <circle cx="18" cy="18" r="14" fill="none" stroke="${c}" stroke-width="2.5"
+          stroke-dasharray="88" stroke-dashoffset="${off}" stroke-linecap="round"/>
+      </svg>
+      <span class="score-num" style="color:${c};font-size:11px;position:relative;z-index:1">${s===null?'–':s}</span>
+    </div>`;
+  }
+
+  function metricVal(v, good, avg, unit) {
+    if (v===null) return '–';
+    const cls = VC(v,good,avg);
+    const disp = unit==='s' ? v.toFixed(1) : unit==='ms' ? Math.round(v) : v.toFixed(3);
+    return `<span class="${cls}">${disp}</span>${unit?`<span class="metric-unit"> ${unit}</span>`:''}`;
+  }
 
   const lastUpdate = new Date().toLocaleTimeString('pt-BR');
+  const allReady = ACTIVE_URLS_CACHE.every(g => g.squads.every(s => s.urls.every(u => u.metrics !== null)));
+  const statusMsg = allReady
+    ? `✓ Métricas prontas · ${lastUpdate}`
+    : `⏳ Servidor pré-carregando métricas em background — volte em ~2 min`;
+
   container.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
-      <span style="font-size:11px;color:var(--text3)">Planilha lida em tempo real · última vez às ${lastUpdate}</span>
-      <button onclick="ACTIVE_URLS_CACHE=null;loadActiveUrls()" class="btn" style="font-size:11px;padding:4px 12px">↻ Reler planilha</button>
+      <span style="font-size:11px;color:var(--text3)">${statusMsg}</span>
+      <button onclick="ACTIVE_URLS_CACHE=null;loadActiveUrls()" class="btn" style="font-size:11px;padding:4px 12px">↻ Atualizar</button>
     </div>
   ` + ACTIVE_URLS_CACHE.map(group => `
     <div class="group-label">${group.company}</div>
     ${group.squads.map(sq => {
-      const urls = sq.urls;
-      if (!urls.length) return `<div class="squad-section"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
+      if (!sq.urls.length) return `<div class="squad-section"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
       return `<div class="squad-section">
-        <div class="squad-title">${sq.squad} <span class="squad-count">${urls.length} URL${urls.length > 1 ? 's' : ''}</span></div>
+        <div class="squad-title">${sq.squad} <span class="squad-count">${sq.urls.length} URL${sq.urls.length>1?'s':''}</span></div>
         <div class="url-grid">
-          ${urls.map(url => {
+          ${sq.urls.map(({url, metrics: m}) => {
             const clean = url.replace(/^https?:\/\//, '');
-            const id = 'u_' + clean.replace(/[\/\.\-:?=&]/g,'_').slice(0,50);
-            const host = getHostname(url);
-            const slug = clean.includes('/') ? '/'+clean.split('/').slice(1).join('/') : '';
-            return `<div class="url-card loading" id="${id}">
+            const host  = getHostname(url);
+            const slug  = clean.includes('/') ? '/'+clean.split('/').slice(1).join('/') : '/';
+            const noData = !m;
+            return `<div class="url-card">
               <div class="url-card-top">
                 <div class="url-path" title="${url}">
-                  <span class="url-slug" style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug || '/'}</span>
-                  <span class="url-host" style="font-size:10px;color:var(--text3);display:block;margin-top:2px">${host}</span>
+                  <span style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug}</span>
+                  <span style="font-size:10px;color:var(--text3);display:block;margin-top:2px">${host}</span>
                 </div>
-                <div class="score-ring" style="width:36px;height:36px">
-                  <svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/><circle id="${id}_arc" cx="18" cy="18" r="14" fill="none" stroke="#4a4f61" stroke-width="2.5" stroke-dasharray="88" stroke-dashoffset="88" stroke-linecap="round" style="transition:stroke-dashoffset .6s ease,stroke .4s ease"/></svg>
-                  <span class="score-num" id="${id}_score" style="color:#4a4f61;font-size:11px"><span class="spinner" style="width:10px;height:10px"></span></span>
-                </div>
+                ${noData ? `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center"><span class="spinner" style="width:14px;height:14px"></span></div>` : scoreRing(m.score, url)}
               </div>
               <div class="metrics-row" style="margin-top:8px">
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">LCP</span></div><div class="metric-value" id="${id}_lcp" style="font-size:15px">–</div></div>
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">INP</span></div><div class="metric-value" id="${id}_inp" style="font-size:15px">–</div></div>
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">CLS</span></div><div class="metric-value" id="${id}_cls" style="font-size:15px">–</div></div>
+                <div class="metric"><div class="metric-label-row"><span class="metric-label">LCP</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.lcp,2.5,4.0,'s')}</div></div>
+                <div class="metric"><div class="metric-label-row"><span class="metric-label">INP</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.inp,200,500,'ms')}</div></div>
+                <div class="metric"><div class="metric-label-row"><span class="metric-label">CLS</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.cls,0.1,0.25,'')}</div></div>
               </div>
-              <div id="${id}_err"></div>
+              ${m?.error?`<div class="err-msg">⚠ ${m.error.slice(0,60)}</div>`:''}
             </div>`;
           }).join('')}
         </div>
@@ -360,10 +382,8 @@ function renderUrlsView() {
     }).join('')}
   `).join('');
 
-  // Fetch PageSpeed in batches of 3 to avoid overwhelming the proxy
-  const allUrlsToFetch = [];
-  ACTIVE_URLS_CACHE.forEach(group => group.squads.forEach(sq => sq.urls.forEach(url => allUrlsToFetch.push(url))));
-  fetchInBatches(allUrlsToFetch);
+  // Auto-refresh se ainda tem dados pendentes
+  if (!allReady) setTimeout(() => { ACTIVE_URLS_CACHE=null; loadActiveUrls(); }, 30000);
 }
 
 async function fetchInBatches(urls) {
