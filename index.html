@@ -130,6 +130,20 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
   e recarregue a página. O proxy resolve o bloqueio de CORS da API do Google.
 </div>
 
+<div class="filter-bar" id="filter-bar">
+  <span style="font-size:11px;color:var(--text3)">Status:</span>
+  <button class="filter-btn f-status active" data-filter="all"    onclick="setFilter(this,'status')">Todos</button>
+  <button class="filter-btn f-status"        data-filter="good"   onclick="setFilter(this,'status')">✅ Bom</button>
+  <button class="filter-btn f-status"        data-filter="avg"    onclick="setFilter(this,'status')">⚠️ Melhorar</button>
+  <button class="filter-btn f-status"        data-filter="poor"   onclick="setFilter(this,'status')">❌ Ruim</button>
+  <button class="filter-btn f-status"        data-filter="nodata" onclick="setFilter(this,'status')">◯ Sem dados</button>
+  <span class="filter-sep"></span>
+  <span style="font-size:11px;color:var(--text3)">Empresa:</span>
+  <button class="filter-btn f-company active" data-company="all"        onclick="setFilter(this,'company')">Todas</button>
+  <button class="filter-btn f-company"        data-company="creditavel" onclick="setFilter(this,'company')">Creditável</button>
+  <button class="filter-btn f-company"        data-company="neocred"    onclick="setFilter(this,'company')">Neocred</button>
+</div>
+
 <div id="view-domains"><div class="legend">
   <span class="leg"><span class="leg-dot" style="background:var(--good)"></span>Bom</span>
   <span class="leg"><span class="leg-dot" style="background:var(--avg)"></span>Precisa melhorar</span>
@@ -171,8 +185,9 @@ function tooltipHTML(key){
 }
 
 function createCard(d){
-  const id='c_'+d.replace(/[\.\-]/g,'_');
-  return `<div class="site-card loading" id="${id}">
+  const id='c_'+d.replace(/[\.-]/g,'_');
+  const co=(['economigo.org','economyeagle.com','credon.com.br','dinstoday.com'].includes(d))?'neocred':'creditavel';
+  return `<div class="site-card loading" id="${id}" data-company="${co}">
     <div class="card-header">
       <span class="site-name">${d}<a class="ext-link" href="https://${d}" target="_blank" rel="noopener">↗</a></span>
       <div class="score-ring">
@@ -372,8 +387,10 @@ function renderUrlsView() {
   ` + ACTIVE_URLS_CACHE.map(group => `
     <div class="group-label">${group.company}</div>
     ${group.squads.map(sq => {
-      if (!sq.urls.length) return `<div class="squad-section"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
-      return `<div class="squad-section">
+      if (!sq.urls.length) const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
+      return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
+      const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
+      return `<div class="squad-section" data-company="${sqCo}">
         <div class="squad-title">${sq.squad} <span class="squad-count">${sq.urls.length} URL${sq.urls.length>1?'s':''}</span></div>
         <div class="url-grid">
           ${sq.urls.map(({url, metrics: m}) => {
@@ -381,7 +398,8 @@ function renderUrlsView() {
             const host  = getHostname(url);
             const slug  = clean.includes('/') ? '/'+clean.split('/').slice(1).join('/') : '/';
             const noData = !m;
-            return `<div class="url-card">
+            const urlCo = (['economigo.org','economyeagle.com','credon.com.br','dinstoday.com'].some(d=>host.includes(d)))?'neocred':'creditavel';
+            return `<div class="url-card" data-company="${urlCo}">
               <div class="url-card-top">
                 <div class="url-path" title="${url}">
                   <span style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug}</span>
@@ -458,65 +476,73 @@ async function fetchUrl(url) {
 </script>
 
 <script>
-let activeFilter  = 'all';
+let activeStatus  = 'all';
 let activeCompany = 'all';
 
-function getCardScore(card) {
-  const arc = card.querySelector('circle[id$="_arc"]') || card.querySelector('circle:last-child');
-  const num = card.querySelector('.score-num');
-  if (!num) return null;
-  const t = num.textContent.trim();
-  if (t === '–' || t === '' || num.querySelector('.spinner')) return null;
-  return parseInt(t);
-}
-
-function getCardCompany(card) {
-  // domain cards: site-name text; url cards: url-host text
-  const nm = card.querySelector('.site-name') || card.querySelector('[style*="url-host"]');
-  if (!nm) return '';
-  const text = nm.textContent.toLowerCase();
-  const neocredDomains = ['economigo','economyeagle','credon','dinstoday'];
-  return neocredDomains.some(d => text.includes(d)) ? 'neocred' : 'creditavel';
-}
-
 function scoreStatus(s) {
-  if (s === null) return 'nodata';
-  if (s >= 90)   return 'good';
-  if (s >= 50)   return 'avg';
+  if (s === null || s === undefined) return 'nodata';
+  if (s >= 90) return 'good';
+  if (s >= 50) return 'avg';
   return 'poor';
 }
 
+function getCardScore(card) {
+  const num = card.querySelector('.score-num');
+  if (!num) return null;
+  const t = num.textContent.trim();
+  if (!t || t === '–' || num.querySelector('.spinner')) return null;
+  const n = parseInt(t);
+  return isNaN(n) ? null : n;
+}
+
 function applyFilters() {
-  const cards = document.querySelectorAll('.site-card, .url-card');
-  cards.forEach(card => {
+  // Cards with explicit data-company
+  document.querySelectorAll('.site-card, .url-card').forEach(card => {
     const score   = getCardScore(card);
     const status  = scoreStatus(score);
-    const company = getCardCompany(card);
-    const showStatus  = activeFilter  === 'all' || status  === activeFilter;
-    const showCompany = activeCompany === 'all' || company === activeCompany;
-    card.classList.toggle('hidden', !(showStatus && showCompany));
+    const company = card.dataset.company || 'creditavel';
+    const okStatus  = activeStatus  === 'all' || status  === activeStatus;
+    const okCompany = activeCompany === 'all' || company === activeCompany;
+    card.classList.toggle('hidden', !(okStatus && okCompany));
+  });
+
+  // Squad sections: hide if all cards hidden or company mismatch
+  document.querySelectorAll('.squad-section').forEach(sec => {
+    const co = sec.dataset.company || 'creditavel';
+    const okCompany = activeCompany === 'all' || co === activeCompany;
+    const visibleCards = sec.querySelectorAll('.url-card:not(.hidden)').length;
+    sec.classList.toggle('hidden', !okCompany || (activeStatus !== 'all' && visibleCards === 0));
+  });
+
+  // Group labels: hide if no visible sections below
+  document.querySelectorAll('.group-label').forEach(lbl => {
+    let sib = lbl.nextElementSibling;
+    let hasVisible = false;
+    while (sib && !sib.classList.contains('group-label')) {
+      if (!sib.classList.contains('hidden')) hasVisible = true;
+      sib = sib.nextElementSibling;
+    }
+    lbl.style.display = hasVisible ? '' : 'none';
   });
 }
 
-function applyFilter(btn) {
-  document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  activeFilter = btn.dataset.filter;
+function setFilter(btn, type) {
+  if (type === 'status') {
+    document.querySelectorAll('.f-status').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeStatus = btn.dataset.filter;
+  } else {
+    document.querySelectorAll('.f-company').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCompany = btn.dataset.company;
+  }
   applyFilters();
 }
 
-function applyCompany(btn) {
-  document.querySelectorAll('[data-company]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  activeCompany = btn.dataset.company;
-  applyFilters();
-}
-
-// Re-apply filters whenever cards update (score changes)
-const _origSetScore = window.setScore;
-if (typeof setScore === 'function') {
-  const __orig = setScore;
-  window.setScore = function(id, s) { __orig(id, s); setTimeout(applyFilters, 100); };
+// Hook into setScore so filters re-apply as scores load
+const _ss = typeof setScore !== 'undefined' ? setScore : null;
+if (_ss) {
+  window.setScore = function(id, s) { _ss(id, s); setTimeout(applyFilters, 150); };
 }
 </script>
 </body>
