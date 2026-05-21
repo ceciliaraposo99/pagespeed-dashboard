@@ -290,7 +290,14 @@ async function loadActiveUrls() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    ACTIVE_URLS_CACHE = data;
+    // Normalise: ensure each url entry is {url, metrics}
+    ACTIVE_URLS_CACHE = data.map(g => ({
+      ...g,
+      squads: g.squads.map(s => ({
+        ...s,
+        urls: s.urls.map(u => typeof u === 'string' ? {url: u, metrics: null} : u)
+      }))
+    }));
     renderUrlsView();
   } catch(e) {
     container.innerHTML = `<div style="padding:2rem;color:var(--poor);font-size:13px">⚠ Erro ao carregar planilha: ${e.message}<br><br><button onclick="loadActiveUrls()" class="btn" style="font-size:12px;padding:5px 14px">↻ Tentar novamente</button></div>`;
