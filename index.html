@@ -122,9 +122,33 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
 </header>
 
 <div class="tabs">
-  <button class="tab-btn tab-active" id="tab-domains" onclick="switchTab('domains')">📊 Domínios</button>
-  <button class="tab-btn" id="tab-urls" onclick="switchTab('urls')">🔗 URLs Ativas</button>
+  <button class="tab-btn tab-active" id="tab-urls" onclick="switchTab('urls')">🔗 URLs Ativas</button>
+  <button class="tab-btn" id="tab-domains" onclick="switchTab('domains')">📊 Domínios</button>
 </div>
+<script>
+// Stub — real implementation loaded below; ensures onclick works even if later script delays
+function switchTab(tab) {
+  ['domains','urls'].forEach(t => {
+    var el = document.getElementById('view-' + t);
+    var btn = document.getElementById('tab-' + t);
+    if (el)  el.style.display  = (t === tab) ? '' : 'none';
+    if (btn) btn.classList.toggle('tab-active', t === tab);
+  });
+  if (tab === 'urls') {
+    if (typeof loadActiveUrls === 'function') {
+      if (!window.ACTIVE_URLS_CACHE) loadActiveUrls(); else if (typeof renderUrlsView === 'function') renderUrlsView();
+    }
+  }
+}
+function setFilter(btn, type) {
+  var cls = type === 'status' ? 'f-status' : 'f-company';
+  document.querySelectorAll('.' + cls).forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  if (type === 'status') window._activeStatus = btn.dataset.filter;
+  else window._activeCompany = btn.dataset.company;
+  if (typeof applyFilters === 'function') applyFilters();
+}
+</script>
 
 <div class="filter-bar" id="filter-bar">
   <span style="font-size:11px;color:var(--text3)">Status:</span>
@@ -145,7 +169,7 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
 </div>
 
 <!-- DOMAINS VIEW -->
-<div id="view-domains">
+<div id="view-domains" style="display:none">
   <div class="legend">
     <span class="leg"><span class="leg-dot" style="background:var(--good)"></span>Bom</span>
     <span class="leg"><span class="leg-dot" style="background:var(--avg)"></span>Precisa melhorar</span>
@@ -160,7 +184,7 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
 </div>
 
 <!-- URLS VIEW -->
-<div id="view-urls" style="display:none"></div>
+<div id="view-urls"></div>
 
 <footer>
   <span>Dados via Google PageSpeed Insights API · Estratégia Mobile · Janela 28 dias</span>
@@ -336,7 +360,7 @@ async function loadActiveUrls() {
 }
 
 // =================== TABS LOGIC ===================
-let activeTab = 'domains';
+let activeTab = 'urls';
 
 function switchTab(tab) {
   activeTab = tab;
