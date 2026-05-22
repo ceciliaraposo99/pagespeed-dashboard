@@ -6,7 +6,7 @@ const API_KEY = process.env.PAGESPEED_API_KEY || 'AIzaSyAKVkXSDdbVt7nF4CNysCr0xt
 
 const SHEETS = [
   { company: 'Creditável', spreadsheetId: '17CrjCrPVw2CZ1iC10_S-eOZnnjcblyA8O6PPXD6NQoI', gid: '847864582', ranges: ['D15:E15','D29:E29','D43:E43','D56:E56'] },
-  { company: 'Neocred',    spreadsheetId: '1tIl6N1kJv4JGhr_GhwFFEUUD4B0MljOMIMfsITboRbg', gid: '1638901989', ranges: ['D15:E15','D29:E29'] }
+  { company: 'Neocred',    spreadsheetId: '1tIl6N1kJv4JGhr_GhwFFEUUD4B0MljOMIMfsITboRbg', gid: '1035220480', ranges: ['D15:E15','D29:E29'] }
 ];
 
 // ── Cache ──────────────────────────────────────────────
@@ -14,6 +14,60 @@ const psCache   = new Map(); // url -> { data, ts }
 const urlsCache = { data: null, ts: 0 };
 const PS_TTL    = 15 * 60 * 1000; // 15 min
 const URLS_TTL  =  5 * 60 * 1000; //  5 min
+
+// ── Slack alerts ──────────────────────────────────────
+const SLACK_TOKEN    = process.env.SLACK_TOKEN || '';
+const SLACK_CHANNEL  = 'C0B6HAU1664'; // #core-vitals-alert
+const alertedToday   = new Set(); // avoid duplicate alerts per URL per day
+
+function slackAlert(url, metrics) {
+  if (!SLACK_TOKEN) return;
+
+  // Check thresholds: LCP > 4s or INP > 500ms
+  const issues = [];
+  if (metrics.lcp  != null && metrics.lcp  > 4)   issues.push(`🐌 *LCP:* ${metrics.lcp}s _(limite: 4s)_`);
+  if (metrics.inp  != null && metrics.inp  > 500)  issues.push(`🖱️ *INP:* ${metrics.inp}ms _(limite: 500ms)_`);
+  if (!issues.length) return;
+
+  // Deduplicate: one alert per URL per calendar day
+  const todayKey = url + '|' + new Date().toISOString().slice(0,10);
+  if (alertedToday.has(todayKey)) return;
+  alertedToday.add(todayKey);
+  setTimeout(() => alertedToday.delete(todayKey), 24*60*60*1000);
+
+  const score     = metrics.score != null ? metrics.score : '–';
+  const scoreEmoji = metrics.score >= 90 ? '🟢' : metrics.score >= 50 ? '🟡' : '🔴';
+  const message = [
+    `${scoreEmoji} *Alerta Core Web Vitals* — score ${score}`,
+    `🔗 <https://${url.replace(/^https?:\/\//, '')}|${url.replace(/^https?:\/\//, '')}>`,
+    '',
+    issues.join('\n'),
+    '',
+    `_Detectado em ${new Date().toLocaleString('pt-BR', {timeZone:'America/Recife'})}_`
+  ].join('\n');
+
+  const body = JSON.stringify({ channel: SLACK_CHANNEL, text: message });
+  const opts = {
+    hostname: 'slack.com',
+    path: '/api/chat.postMessage',
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + SLACK_TOKEN,
+      'Content-Length': Buffer.byteLength(body)
+    }
+  };
+  const req = https.request(opts, res => {
+    let d = ''; res.on('data', c => d += c);
+    res.on('end', () => {
+      const r = JSON.parse(d);
+      if (!r.ok) console.error('[slack] error:', r.error);
+      else console.log('[slack] alert sent for', url);
+    });
+  });
+  req.on('error', e => console.error('[slack] request error:', e.message));
+  req.write(body); req.end();
+}
 
 // ── HTTP helpers ───────────────────────────────────────
 function httpsGetRaw(url) {
@@ -75,24 +129,44 @@ function fetchPS(site, strategy, attempt) {
 
 // ── Extract metrics from PageSpeed response ───────────
 function extractMetrics(d) {
-  const audits = d.lighthouseResult?.audits;
-  const cats   = d.lighthouseResult?.categories;
+  // Use CrUX field data (real user experience, last 28 days)
+  // This matches what pagespeed.web.dev shows in the "field data" section
+  const field  = d.loadingExperience?.metrics;
+  const origin = d.originLoadingExperience?.metrics;
+  const pick   = k => {
+    const m = field?.[k] || origin?.[k];
+    return m?.percentile ?? null;
+  };
 
-  // Score from Lighthouse
+  // Score from Lighthouse (no CrUX equivalent)
+  const cats  = d.lighthouseResult?.categories;
   const score = cats?.performance?.score != null
     ? Math.round(cats.performance.score * 100) : null;
 
-  // LCP, INP, CLS from Lighthouse audits (same source as the score)
-  const lcpVal = audits?.['largest-contentful-paint']?.numericValue;
-  const inpVal = audits?.['interaction-to-next-paint']?.numericValue
-              ?? audits?.['total-blocking-time']?.numericValue;
-  const clsVal = audits?.['cumulative-layout-shift']?.numericValue;
+  const lcpMs  = pick('LARGEST_CONTENTFUL_PAINT_MS');
+  const inp    = pick('INTERACTION_TO_NEXT_PAINT');
+  const clsRaw = pick('CUMULATIVE_LAYOUT_SHIFT_SCORE');
+
+  // If no CrUX data available, fall back to Lighthouse lab data
+  const audits  = d.lighthouseResult?.audits;
+  const lcpLab  = audits?.['largest-contentful-paint']?.numericValue;
+  const inpLab  = audits?.['interaction-to-next-paint']?.numericValue
+               ?? audits?.['total-blocking-time']?.numericValue;
+  const clsLab  = audits?.['cumulative-layout-shift']?.numericValue;
+
+  const lcp = lcpMs  != null ? +(lcpMs  / 1000).toFixed(2)
+            : lcpLab != null ? +(lcpLab / 1000).toFixed(2) : null;
+  const inpV= inp    != null ? Math.round(inp)
+            : inpLab != null ? Math.round(inpLab)           : null;
+  const cls = clsRaw != null ? +(clsRaw / 100).toFixed(3)
+            : clsLab != null ? +clsLab.toFixed(3)           : null;
 
   return {
     score,
-    lcp:   lcpVal != null ? +( lcpVal / 1000).toFixed(2) : null,
-    inp:   inpVal != null ? Math.round(inpVal)            : null,
-    cls:   clsVal != null ? +clsVal.toFixed(3)            : null,
+    lcp,
+    inp: inpV,
+    cls,
+    source: lcpMs != null ? 'crux' : 'lighthouse',
     error: d.error?.message || d.lighthouseResult?.runtimeError?.message || null
   };
 }
@@ -110,7 +184,9 @@ async function prefetchAll() {
     try {
       console.log('[prefetch]', url);
       const data = await fetchPS(url, 'mobile', 1);
-      psCache.set(key, { data: extractMetrics(data), ts: Date.now() });
+      const m = extractMetrics(data);
+      psCache.set(key, { data: m, ts: Date.now() });
+      slackAlert(url, m);
     } catch(e) { console.error('[prefetch] error', url, e.message); }
   }
   console.log('[prefetch] done — cached', psCache.size, 'URLs');
