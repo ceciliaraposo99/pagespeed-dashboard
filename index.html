@@ -134,9 +134,11 @@ function switchTab(tab) {
     if (el)  el.style.display  = (t === tab) ? '' : 'none';
     if (btn) btn.classList.toggle('tab-active', t === tab);
   });
+  window._activeTab = tab;
   if (tab === 'urls') {
     if (typeof loadActiveUrls === 'function') {
-      if (!window.ACTIVE_URLS_CACHE) loadActiveUrls(); else if (typeof renderUrlsView === 'function') renderUrlsView();
+      if (!window.ACTIVE_URLS_CACHE) loadActiveUrls();
+      else if (typeof renderUrlsView === 'function') renderUrlsView();
     }
   }
 }
