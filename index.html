@@ -159,7 +159,11 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
 <div class="group-label">Neocred</div>
 <div class="sites-grid" id="grid-neocred"></div>
 
-</div><div id="view-urls" style="display:none"></div><footer>
+</div>
+
+<div id="view-urls" style="display:none"></div>
+
+<footer>
   <span>Dados via Google PageSpeed Insights API · Estratégia Mobile · Janela 28 dias</span>
   <span id="last-update"></span>
 </footer>
@@ -340,9 +344,13 @@ function switchTab(tab) {
   document.getElementById('tab-domains').classList.toggle('tab-active', tab === 'domains');
   document.getElementById('tab-urls').classList.toggle('tab-active', tab === 'urls');
   document.getElementById('view-domains').style.display = tab === 'domains' ? '' : 'none';
-  document.getElementById('view-urls').style.display = tab === 'urls' ? '' : 'none';
+  document.getElementById('view-urls').style.display    = tab === 'urls'    ? '' : 'none';
   if (tab === 'urls') { if (!ACTIVE_URLS_CACHE) loadActiveUrls(); else renderUrlsView(); }
 }
+
+// Expose globally so onclick works
+window.switchTab = switchTab;
+window.setFilter = setFilter;
 
 function getHostname(url) {
   try { return new URL('https://' + url.replace(/^https?:\/\//, '')).hostname; } catch(e) { return url.split('/')[0]; }
@@ -387,7 +395,8 @@ function renderUrlsView() {
   ` + ACTIVE_URLS_CACHE.map(group => `
     <div class="group-label">${group.company}</div>
     ${group.squads.map(sq => {
-      if (!sq.urls.length) const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
+      const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
+      if (!sq.urls.length) return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
       return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
       const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
       return `<div class="squad-section" data-company="${sqCo}">
