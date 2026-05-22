@@ -102,6 +102,8 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
 </head>
 <body>
 
+<body>
+
 <header>
   <div class="header-left">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
@@ -118,16 +120,10 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
     <button class="btn" onclick="startAll()" id="refresh-btn">↻ Atualizar</button>
   </div>
 </header>
+
 <div class="tabs">
   <button class="tab-btn tab-active" id="tab-domains" onclick="switchTab('domains')">📊 Domínios</button>
   <button class="tab-btn" id="tab-urls" onclick="switchTab('urls')">🔗 URLs Ativas</button>
-</div>
-
-
-<div class="notice" id="notice">
-  <strong>⚙ Configuração necessária:</strong> Este dashboard precisa do servidor proxy rodando localmente.<br>
-  Execute no terminal: <code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:11px">node server.js</code>
-  e recarregue a página. O proxy resolve o bloqueio de CORS da API do Google.
 </div>
 
 <div class="filter-bar" id="filter-bar">
@@ -144,23 +140,26 @@ footer{margin-top:3rem;padding-top:1rem;border-top:0.5px solid var(--border);fon
   <button class="filter-btn f-company"        data-company="neocred"    onclick="setFilter(this,'company')">Neocred</button>
 </div>
 
-<div id="view-domains"><div class="legend">
-  <span class="leg"><span class="leg-dot" style="background:var(--good)"></span>Bom</span>
-  <span class="leg"><span class="leg-dot" style="background:var(--avg)"></span>Precisa melhorar</span>
-  <span class="leg"><span class="leg-dot" style="background:var(--poor)"></span>Ruim</span>
-  <span class="leg"><span class="leg-dot" style="background:var(--text3)"></span>Sem dados</span>
+<div id="notice" class="notice" style="display:none">
+  <strong>⚙ Configuração necessária:</strong> Execute <code>node server.js</code> e recarregue.
 </div>
 
-<div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
-
-<div class="group-label">Creditável</div>
-<div class="sites-grid" id="grid-creditavel"></div>
-
-<div class="group-label">Neocred</div>
-<div class="sites-grid" id="grid-neocred"></div>
-
+<!-- DOMAINS VIEW -->
+<div id="view-domains">
+  <div class="legend">
+    <span class="leg"><span class="leg-dot" style="background:var(--good)"></span>Bom</span>
+    <span class="leg"><span class="leg-dot" style="background:var(--avg)"></span>Precisa melhorar</span>
+    <span class="leg"><span class="leg-dot" style="background:var(--poor)"></span>Ruim</span>
+    <span class="leg"><span class="leg-dot" style="background:var(--text3)"></span>Sem dados</span>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+  <div class="group-label">Creditável</div>
+  <div class="sites-grid" id="grid-creditavel"></div>
+  <div class="group-label">Neocred</div>
+  <div class="sites-grid" id="grid-neocred"></div>
 </div>
 
+<!-- URLS VIEW -->
 <div id="view-urls" style="display:none"></div>
 
 <footer>
@@ -554,5 +553,6 @@ if (_ss) {
   window.setScore = function(id, s) { _ss(id, s); setTimeout(applyFilters, 150); };
 }
 </script>
+
 </body>
 </html>
