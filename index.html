@@ -422,8 +422,6 @@ function renderUrlsView() {
     ${group.squads.map(sq => {
       const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
       if (!sq.urls.length) return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
-      return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
-      const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
       return `<div class="squad-section" data-company="${sqCo}">
         <div class="squad-title">${sq.squad} <span class="squad-count">${sq.urls.length} URL${sq.urls.length>1?'s':''}</span></div>
         <div class="url-grid">
