@@ -384,80 +384,71 @@ function getHostname(url) {
 function renderUrlsView() {
   if (!ACTIVE_URLS_CACHE) { loadActiveUrls(); return; }
   const container = document.getElementById('view-urls');
-  const SC = s => s===null?'#4a4f61':s>=90?'#4ade80':s>=50?'#fbbf24':'#f87171';
-  const VC = (v,g,a) => v===null?'':v<=g?'good-v':v<=a?'avg-v':'poor-v';
+  if (!container) return;
 
-  function scoreRing(s, id) {
-    const c = SC(s); const off = s===null?88:88-(s/100)*88;
-    return `<div class="score-ring" style="width:36px;height:36px">
-      <svg width="36" height="36" viewBox="0 0 36 36">
-        <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/>
-        <circle cx="18" cy="18" r="14" fill="none" stroke="${c}" stroke-width="2.5"
-          stroke-dasharray="88" stroke-dashoffset="${off}" stroke-linecap="round"/>
-      </svg>
-      <span class="score-num" style="color:${c};font-size:11px;position:relative;z-index:1">${s===null?'–':s}</span>
-    </div>`;
-  }
+  const SC = s => s==null?'#4a4f61':s>=90?'#4ade80':s>=50?'#fbbf24':'#f87171';
+  const VC = (v,g,a) => v==null?'':v<=g?'good-v':v<=a?'avg-v':'poor-v';
+  const fmt = (v,u) => v==null ? '–' : u==='s' ? `<span class="${VC(v,2.5,4)}">${v.toFixed(1)}</span><span class="metric-unit"> s</span>` : u==='ms' ? `<span class="${VC(v,200,500)}">${Math.round(v)}</span><span class="metric-unit"> ms</span>` : `<span class="${VC(v,0.1,0.25)}">${v.toFixed(3)}</span>`;
 
-  function metricVal(v, good, avg, unit) {
-    if (v===null) return '–';
-    const cls = VC(v,good,avg);
-    const disp = unit==='s' ? v.toFixed(1) : unit==='ms' ? Math.round(v) : v.toFixed(3);
-    return `<span class="${cls}">${disp}</span>${unit?`<span class="metric-unit"> ${unit}</span>`:''}`;
-  }
-
+  let html = '';
   const lastUpdate = new Date().toLocaleTimeString('pt-BR');
-  const allReady = ACTIVE_URLS_CACHE.every(g => g.squads.every(s => s.urls.every(u => u.metrics !== null)));
-  const statusMsg = allReady
-    ? `✓ Métricas prontas · ${lastUpdate}`
-    : `⏳ Servidor pré-carregando métricas em background — volte em ~2 min`;
+  const allReady = ACTIVE_URLS_CACHE.every(g=>g.squads.every(s=>s.urls.every(u=>u.metrics!==null)));
+  const msg = allReady ? `✓ Métricas prontas · ${lastUpdate}` : `⏳ Carregando métricas em background...`;
 
-  container.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
-      <span style="font-size:11px;color:var(--text3)">${statusMsg}</span>
-      <button onclick="ACTIVE_URLS_CACHE=null;loadActiveUrls()" class="btn" style="font-size:11px;padding:4px 12px">↻ Atualizar</button>
-    </div>
-  ` + ACTIVE_URLS_CACHE.map(group => `
-    <div class="group-label">${group.company}</div>
-    ${group.squads.map(sq => {
-      const sqCo = group.company.toLowerCase().includes('neocred')?'neocred':'creditavel';
-      if (!sq.urls.length) return `<div class="squad-section" data-company="${sqCo}"><div class="squad-title">${sq.squad} <span class="squad-count" style="color:var(--poor)">sem URLs</span></div></div>`;
-      return `<div class="squad-section" data-company="${sqCo}">
-        <div class="squad-title">${sq.squad} <span class="squad-count">${sq.urls.length} URL${sq.urls.length>1?'s':''}</span></div>
-        <div class="url-grid">
-          ${sq.urls.map(({url, metrics: m}) => {
-            const clean = url.replace(/^https?:\/\//, '');
-            const host  = getHostname(url);
-            const slug  = clean.includes('/') ? '/'+clean.split('/').slice(1).join('/') : '/';
-            const noData = !m;
-            const urlCo = (['economigo.org','economyeagle.com','credon.com.br','dinstoday.com'].some(d=>host.includes(d)))?'neocred':'creditavel';
-            return `<div class="url-card" data-company="${urlCo}">
-              <div class="url-card-top">
-                <div class="url-path" title="${url}">
-                  <span style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug}</span>
-                  <span style="font-size:10px;color:var(--text3);display:block;margin-top:2px">${host}</span>
-                </div>
-                ${noData ? `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center"><span class="spinner" style="width:14px;height:14px"></span></div>` : scoreRing(m.score, url)}
-              </div>
-              <div class="metrics-row" style="margin-top:8px">
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">LCP</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.lcp,2.5,4.0,'s')}</div></div>
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">INP</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.inp,200,500,'ms')}</div></div>
-                <div class="metric"><div class="metric-label-row"><span class="metric-label">CLS</span></div><div class="metric-value" style="font-size:15px">${noData?'–':metricVal(m.cls,0.1,0.25,'')}</div></div>
-              </div>
-              ${m?.error?`<div class="err-msg">⚠ ${m.error.slice(0,60)}</div>`:''}
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`;
-    }).join('')}
-  `).join('');
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+    <span style="font-size:11px;color:var(--text3)">${msg}</span>
+    <button onclick="ACTIVE_URLS_CACHE=null;loadActiveUrls()" class="btn" style="font-size:11px;padding:4px 12px">↻ Atualizar</button>
+  </div>`;
 
-  // Auto-refresh a cada 20s enquanto houver dados pendentes
+  for (const group of ACTIVE_URLS_CACHE) {
+    const co = group.company.toLowerCase().includes('neocred') ? 'neocred' : 'creditavel';
+    html += `<div class="group-label">${group.company}</div>`;
+    for (const sq of group.squads) {
+      if (!sq.urls || !sq.urls.length) continue;
+      html += `<div class="squad-section" data-company="${co}">`;
+      html += `<div class="squad-title">${sq.squad} <span class="squad-count">${sq.urls.length} URLs</span></div>`;
+      html += `<div class="url-grid">`;
+      for (const item of sq.urls) {
+        const url = item.url || item;
+        const m   = item.metrics || null;
+        const clean = url.replace(/^https?:\/\//, '');
+        const host  = clean.split('/')[0];
+        const slug  = clean.includes('/') ? '/' + clean.split('/').slice(1).join('/') : '/';
+        const urlCo = ['economigo','economyeagle','credon','dinstoday'].some(d=>host.includes(d)) ? 'neocred' : 'creditavel';
+        const score = m ? m.score : null;
+        const c = SC(score);
+        const off = score==null ? 88 : 88-(score/100)*88;
+
+        html += `<div class="url-card" data-company="${urlCo}">
+          <div class="url-card-top">
+            <div class="url-path" title="${url}">
+              <span style="font-size:12px;font-weight:600;color:var(--text);display:block;word-break:break-all;line-height:1.4">${slug}</span>
+              <span style="font-size:10px;color:var(--text3);display:block;margin-top:2px">${host}</span>
+            </div>
+            <div class="score-ring" style="width:36px;height:36px">
+              <svg width="36" height="36" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2.5"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="${c}" stroke-width="2.5" stroke-dasharray="88" stroke-dashoffset="${off}" stroke-linecap="round"/>
+              </svg>
+              <span class="score-num" style="color:${c};font-size:11px;position:relative;z-index:1">${score==null?(m?'–':'…'):score}</span>
+            </div>
+          </div>
+          <div class="metrics-row" style="margin-top:8px">
+            <div class="metric"><div class="metric-label-row"><span class="metric-label">LCP</span></div><div class="metric-value" style="font-size:15px">${m?fmt(m.lcp,'s'):'–'}</div></div>
+            <div class="metric"><div class="metric-label-row"><span class="metric-label">INP</span></div><div class="metric-value" style="font-size:15px">${m?fmt(m.inp,'ms'):'–'}</div></div>
+            <div class="metric"><div class="metric-label-row"><span class="metric-label">CLS</span></div><div class="metric-value" style="font-size:15px">${m?fmt(m.cls,''):'–'}</div></div>
+          </div>
+          ${m&&m.error?`<div class="err-msg">⚠ ${m.error.slice(0,60)}</div>`:''}
+        </div>`;
+      }
+      html += `</div></div>`;
+    }
+  }
+
+  container.innerHTML = html;
   if (!allReady) {
-    clearTimeout(window._urlsRefreshTimer);
-    window._urlsRefreshTimer = setTimeout(() => { ACTIVE_URLS_CACHE=null; loadActiveUrls(); }, 20000);
-  } else {
-    clearTimeout(window._urlsRefreshTimer);
+    clearTimeout(window._urlsTimer);
+    window._urlsTimer = setTimeout(() => { ACTIVE_URLS_CACHE=null; loadActiveUrls(); }, 20000);
   }
 }
 
